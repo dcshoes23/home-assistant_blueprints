@@ -1,0 +1,66 @@
+blueprint:
+  name: Flashing Switches
+  description: >
+     Flashing switches via on off and delay and finally restore the previous switch states.
+  domain: automation
+  source_url: https://github.com/dcshoes23/home-assistant_blueprints/blob/main/flashing_switches.yaml
+  input:
+    activated:
+        name: Activated
+        description: "Toggle to activate or deactivate flashing switches."
+        selector:
+            entity:
+    target_switches:
+        name: Switches
+        description: "To flashing switches"
+        selector:
+          target:
+            entity:
+              domain: switch
+    delay:
+      name: (OPTIONAL) Delay
+      description: "Delay flashing switches"
+      default: 1000
+      selector:
+        number:
+          min: 0
+          max: 20000
+          unit_of_measurement: milliseconds
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input activated
+    to: 'on'
+
+variables:
+  activated: !input activated
+  delay: !input delay
+  target_lights: !input target_switches
+
+condition: []
+
+action:
+  - service: scene.create
+    data:
+        scene_id: all_switches_snapshot
+        snapshot_entities: >
+               {% set switches = states.switch
+                 | map(attribute='entity_id') | join(',') %}
+                 {{switches}}
+  - service: switch.turn_on
+    target: !input target_switches
+  - repeat:
+      while:
+      - condition: template
+        value_template: "{{ activated == none or is_state(activated, 'on') }}"
+      sequence:
+      - delay: 
+          milliseconds: "{{ delay }}"
+      - service: switch.toggle
+        target: !input target_switches
+  - service: scene.turn_on
+    data:
+      entity_id: scene.all_switches_snapshot
