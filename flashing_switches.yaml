@@ -61,6 +61,8 @@ action:
           milliseconds: "{{ delay }}"
       - service: switch.toggle
         target: !input target_switches
+  - delay:
+      milliseconds: 1000
   - service: scene.turn_on
     data:
       entity_id: scene.all_switches_snapshot
